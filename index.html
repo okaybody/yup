@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실제 엽서 스타일의 고해상도 이미지 뷰어</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            overflow: hidden;
+        }
+        #container {
+            perspective: 1500px;
+            width: 80vw;
+            max-width: 600px;
+        }
+        #postcard {
+            width: 100%;
+            padding-top: 75%; /* 4:3 비율 */
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.1s;
+        }
+        #postcard .front,
+        #postcard .back {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 0;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            border: 1px solid #ddd;
+            background-color: #fff;
+            box-sizing: border-box;
+        }
+        #postcard .front img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #postcard .back {
+            transform: rotateY(180deg);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .quote-area {
+            font-family: Arial, sans-serif;
+            position: absolute;
+            top: 10%;
+            left: 10px;
+            right: 50%; /* 오른쪽을 엽서의 절반으로 제한 */
+            bottom: 10%;
+            margin-left: 2%;  /* 좌우 마진을 2%로 설정 */
+            margin-right: 2%; /* 좌우 마진을 2%로 설정 */
+            overflow: hidden;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #quoteInput {
+            font-family: Arial, sans-serif;
+            width: 96%; /* 좌우 마진을 고려한 너비 조정 */
+            height: 100%;
+            border: none;
+            outline: none;
+            background: none;
+            text-align: center;
+            resize: none;
+            overflow: hidden;
+            box-sizing: border-box;
+            line-height: 1.2;
+            padding: 0;
+            margin: 0;
+            display: block;
+            pointer-events: none; /* 타이핑 비활성화 */
+            font-size: clamp(100%, 2vw, 120%); /* 반응형 폰트 크기 */
+            visibility: visible; /* 폰트 크기 조정 중 깜박임 방지 */
+        }
+        #quoteInput::placeholder {
+            font-size: clamp(100%, 2vw, 120%); /* 플레이스홀더 폰트 크기도 동일하게 반응형으로 설정 */
+            color: #888;
+            text-align: center;
+        }
+        .vertical-line {
+            position: absolute;
+            top: 20px;
+            bottom: 20px;
+            left: 50%;
+            width: 1px; /* 세로 선 두께를 줄임 */
+            background-color: #000;
+        }
+        .stamp-box {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 60px;
+            border: 1px solid #000; /* 테두리 두께를 줄임 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .address-lines {
+            position: absolute;
+            top: 160px; /* 스탬프와 주소 영역 사이에 간격을 더 추가 */
+            right: 20px;
+            left: 55%;
+            height: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-sizing: border-box;
+            max-width: 40%; /* 주소 라인이 엽서 안에 들어가도록 최대 너비 설정 */
+        }
+        .address-line {
+            height: 1px; /* 선 두께를 균등하게 줄임 */
+            background-color: #000;
+            margin-bottom: 10px; /* 선 사이의 간격을 줄임 */
+        }
+        #buttonContainer {
+            display: flex;
+            flex-wrap: wrap;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1;
+            gap: 10px;
+        }
+        #buttonContainer button {
+            font-size: 1rem;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #buttonContainer button:hover {
+            background-color: #0056b3;
+        }
+
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            #container {
+                width: 90vw;
+                max-width: 100%;
+            }
+            #buttonContainer {
+                flex-direction: row;
+                top: 10px;
+                gap: 5px;
+            }
+            #buttonContainer button {
+                font-size: 0.8rem;
+                padding: 8px 10px;
+                width: 48%; /* 2x2 레이아웃을 위해 각 버튼의 너비를 48%로 설정 */
+            }
+            .stamp-box {
+                width: 30px;
+                height: 45px;
+            }
+            .address-lines {
+                max-width: 80%; /* 작은 화면에서 주소 라인 너비 조정 */
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="buttonContainer">
+        <button id="newImageBtn">새 이미지 가져오기</button>
+        <button id="uploadImageBtn">이미지 업로드</button>
+        <button id="newQuoteBtn">새 문구 가져오기</button>
+        <button id="editQuoteBtn">문구 입력</button>
+    </div>
+    <input type="file" id="uploadInput" accept="image/*" style="display:none;">
+    
+    <div id="container">
+        <div id="postcard">
+            <div class="front">
+                <img id="postcardImage" src="" alt="엽서 이미지">
+            </div>
+            <div class="back">
+                <div class="vertical-line"></div>
+                <div class="quote-area" id="quoteArea">
+                    <textarea id="quoteInput" rows="4" placeholder="문구를 가져오거나, 나만의 문구를 입력하세요"></textarea>
+                </div>
+                <div class="stamp-box"></div> <!-- 스탬프 박스 복구, 텍스트 삭제 -->
+                <div class="address-lines">
+                    <div class="address-line"></div>
+                    <div class="address-line"></div>
+                    <div class="address-line"></div>
+                    <div class="address-line"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const postcard = document.getElementById('postcard');
+        const postcardImage = document.getElementById('postcardImage');
+        const newImageBtn = document.getElementById('newImageBtn');
+        const uploadImageBtn = document.getElementById('uploadImageBtn');
+        const uploadInput = document.getElementById('uploadInput');
+        const newQuoteBtn = document.getElementById('newQuoteBtn');
+        const editQuoteBtn = document.getElementById('editQuoteBtn');
+        const quoteInput = document.getElementById('quoteInput');
+
+        let isDragging = false;
+        let startX, startY;
+        let rotateX = 0, rotateY = 0;
+
+        function loadNewImage() {
+            const imageUrl = `https://picsum.photos/1600/1200?random=${Date.now()}`;
+            postcardImage.src = imageUrl;
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        cropAndApplyImage(img);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function cropAndApplyImage(img) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const postcardWidth = 600; // 엽서의 너비 (px)
+            const postcardHeight = 450; // 엽서의 높이 (px) - 4:3 비율 유지
+
+            canvas.width = postcardWidth;
+            canvas.height = postcardHeight;
+
+            const imgAspectRatio = img.width / img.height;
+            const postcardAspectRatio = postcardWidth / postcardHeight;
+
+            let sx, sy, sWidth, sHeight;
+
+            if (imgAspectRatio > postcardAspectRatio) {
+                // 이미지가 엽서보다 더 넓음 -> 위아래를 자름
+                sHeight = img.height;
+                sWidth = sHeight * postcardAspectRatio;
+                sx = (img.width - sWidth) / 2;
+                sy = 0;
+            } else {
+                // 이미지가 엽서보다 더 높음 -> 좌우를 자름
+                sWidth = img.width;
+                sHeight = sWidth / postcardAspectRatio;
+                sx = 0;
+                sy = (img.height - sHeight) / 2;
+            }
+
+            ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, postcardWidth, postcardHeight);
+
+            postcardImage.src = canvas.toDataURL();
+        }
+
+        function loadNewQuote() {
+            fetch('https://api.quotable.io/random')
+                .then(response => response.json())
+                .then(data => {
+                    quoteInput.value = `"${data.content}" - ${data.author}`;
+                    adjustFontSize(); // 새 문구가 로드된 후 크기 조정
+                })
+                .catch(error => {
+                    quoteInput.value = "인용구를 불러오는데 실패했습니다.";
+                    adjustFontSize(); // 에러가 발생해도 크기 조정
+                });
+        }
+
+        function adjustFontSize() {
+            const textarea = quoteInput;
+            const maxHeight = textarea.clientHeight;
+            let fontSize = parseFloat(window.getComputedStyle(textarea).fontSize);
+
+            while (textarea.scrollHeight > maxHeight && fontSize > 10) {
+                fontSize--;
+                textarea.style.fontSize = `${fontSize}px`;
+            }
+        }
+
+        quoteInput.addEventListener('input', adjustFontSize);
+        quoteInput.addEventListener('focus', () => {
+            quoteInput.style.cursor = "text";
+        });
+
+        function startDragging(e) {
+            isDragging = true;
+            startX = e.clientX || e.touches[0].clientX;
+            startY = e.clientY || e.touches[0].clientY;
+            e.preventDefault();
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+
+            const clientX = e.clientX || e.touches[0].clientX;
+            const clientY = e.clientY || e.touches[0].clientY;
+
+            const deltaX = clientX - startX;
+            const deltaY = clientY - startY;
+
+            rotateY += deltaX * 0.5;
+            rotateX -= deltaY * 0.5;
+
+            rotateX = Math.max(-80, Math.min(80, rotateX));
+            rotateY = rotateY % 360;
+
+            postcard.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+
+            startX = clientX;
+            startY = clientY;
+        }
+
+        function stopDragging() {
+            isDragging = false;
+        }
+
+        function enableEditing() {
+            quoteInput.style.pointerEvents = 'auto';
+            quoteInput.focus();
+        }
+
+        newImageBtn.addEventListener('click', loadNewImage);
+        uploadImageBtn.addEventListener('click', () => uploadInput.click());
+        uploadInput.addEventListener('change', handleImageUpload);
+        newQuoteBtn.addEventListener('click', loadNewQuote);
+        editQuoteBtn.addEventListener('click', enableEditing);
+
+        postcard.addEventListener('mousedown', startDragging);
+        postcard.addEventListener('touchstart', startDragging);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag);
+        document.addEventListener('mouseup', stopDragging);
+        document.addEventListener('touchend', stopDragging);
+
+        loadNewImage(); // 초기 이미지 로드
+    </script
+
+</body>
+</html>
